@@ -1,84 +1,54 @@
 import { useForm } from "react-hook-form";
-import { createProduct } from "../api/productApi";
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { toast } from "react-toastify";
+import { createProduct, getProductById, updateProduct } from "../api/productApi";
+import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 
-const ProductForm = () => {
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+const ProductForm = ({ isEdit }) => {
+  const { register, handleSubmit, reset, setValue } = useForm();
   const navigate = useNavigate();
+  const { id } = useParams();
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    if (isEdit && id) {
+      getProductById(id).then(res => {
+        const data = res.data;
+        for (let key in data) {
+          setValue(key, data[key]);
+        }
+      });
+    }
+  }, [isEdit, id, setValue]);
 
   const onSubmit = (data) => {
     setLoading(true);
-    setErrorMsg("");
-    createProduct(data)
+    const action = isEdit ? updateProduct(id, data) : createProduct(data);
+
+    action
       .then(() => {
         reset();
-        toast.success("Product created successfully!");
         navigate("/");
-      })
-      .catch(() => {
-        setErrorMsg("Failed to create product. Please try again.");
       })
       .finally(() => setLoading(false));
   };
 
   return (
     <div className="max-w-md mx-auto">
-      <h2 className="text-2xl mb-4">Create New Product</h2>
-      {errorMsg && <div className="text-red-600 mb-2">{errorMsg}</div>}
+      <h2 className="text-2xl mb-4">{isEdit ? "Edit Product" : "Create Product"}</h2>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <input
-            className="border p-2 w-full"
-            placeholder="Code"
-            {...register("code", { required: "Code is required" })}
-          />
-          {errors.code && <p className="text-red-500 text-sm">{errors.code.message}</p>}
-        </div>
-
-        <div>
-          <input
-            className="border p-2 w-full"
-            placeholder="Name"
-            {...register("name", { required: "Name is required" })}
-          />
-          {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
-        </div>
-
+        <input className="border p-2 w-full" placeholder="Code" {...register("code", { required: true })} />
+        <input className="border p-2 w-full" placeholder="Name" {...register("name", { required: true })} />
         <textarea className="border p-2 w-full" placeholder="Description" {...register("description")} />
-
-        <div>
-          <input
-            className="border p-2 w-full"
-            placeholder="Quantity"
-            type="number"
-            {...register("quantity", { required: "Quantity is required", min: 0 })}
-          />
-          {errors.quantity && <p className="text-red-500 text-sm">{errors.quantity.message}</p>}
-        </div>
-
-        <div>
-          <input
-            className="border p-2 w-full"
-            placeholder="Price"
-            type="number"
-            step="0.01"
-            {...register("price", { required: "Price is required", min: 0 })}
-          />
-          {errors.price && <p className="text-red-500 text-sm">{errors.price.message}</p>}
-        </div>
-
+        <input className="border p-2 w-full" placeholder="Quantity" type="number" {...register("quantity", { valueAsNumber: true })} />
+        <input className="border p-2 w-full" placeholder="Price" type="number" step="0.01" {...register("price", { valueAsNumber: true })} />
         <input className="border p-2 w-full" placeholder="Expiration Date (YYYY-MM-DD)" {...register("expirationDate")} />
 
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+          className="bg-blue-600 text-white px-4 py-2 rounded"
           disabled={loading}
         >
-          {loading ? "Saving..." : "Save"}
+          {loading ? (isEdit ? "Updating..." : "Saving...") : (isEdit ? "Update" : "Save")}
         </button>
       </form>
     </div>
